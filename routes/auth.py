@@ -1,62 +1,69 @@
-from fastapi import APIRouter, HTTPException, status
-from database import supabase
+from fastapi import APIRouter, HTTPException, status, Depends
+from database import supabase # Assuming this is your supabase client
 from models import RegisterDetails, LoginDetails, LoginResponse
-from passlib.context import CryptContext
 from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 import os
 import jwt
+from fastapi.security import OAuth2PasswordBearer
+
 router = APIRouter()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ph = PasswordHasher()
+
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ALGORITHM = "HS256"
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
 
+# --- Utilities ---
 
-# -- functions --
-def encode_token(payload: dict, secret_key: str, algorithm: str = ALGORITHM) -> str:
-    encoded_jwt = jwt.encode(payload, secret_key, algorithm=algorithm)
-    return encoded_jwt
+def encode_token(payload: dict) -> str:
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-def decode_token(token: str, secret_key: str, algorithms: str = ALGORITHM) -> dict:
-    decoded_token = jwt.decode(token, secret_key, algorithms=algorithms)
-    return decoded_token
-    
+def get_current_user(token: str = Depends(oauth2_bearer)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("username")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        
+        # Query Supabase for the user record
+        response = supabase.table("users").select("*").eq("username", username).single().execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        return response.data
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
 
 # --- Routes ---
+
 @router.post("/register")
 def register(data: RegisterDetails):
-    user_dict = data.model_dump()
-    user_dict["password"] = ph.hash(user_dict["password"])
-    response = supabase.table("users").insert(user_dict).execute()
-    return {"message": "User registered successfully", "data": response.data}
+    hashed_password = ph.hash(data.password)
+    user_data = {
+        "username": data.username,
+        "email": data.email,
+        "password": hashed_password
+    }
+    
+    response = supabase.table("users").insert(user_data).execute()
+    return {"message": "User registered successfully"}
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/token")
 def login(data: LoginDetails):
-    # 1. Fetch only the necessary fields (username and hashed password)
+    # Fetch user from Supabase
+    response = supabase.table("users").select("*").eq("username", data.username).execute()
+    
+    if not response.data:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    user = response.data[0]
+
+    # Verify Argon2 Hash
     try:
-        response = supabase.table("users") \
-            .select("username, password") \
-            .eq("username", data.username) \
-            .single() \
-            .execute()
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database connection error"
-        )
+        ph.verify(user["password"], data.password)
+    except VerifyMismatchError:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    user = response.data
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Invalid username or password"
-        )
-
-    if not ph.verify(user["password"], data.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Invalid username or password"
-        )
-    token = encode_token({"username": user["username"]}, SECRET_KEY)
-
-    return {"message": "Login successful", "username": token}
+    token = encode_token({"username": user["username"]})
+    return {"access_token": token, "token_type": "bearer"}

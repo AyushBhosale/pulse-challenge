@@ -136,37 +136,37 @@ def getVideo(user: dict = Depends(get_current_user)):
     return {"videos": videos}
     
 
-@router.delete("/deleteVideo/{video_id}")
-async def delete_video(video_id: str, user: dict = Depends(get_current_user)):
-    username = user.get("username")
+# @router.delete("/deleteVideo/{video_id}")
+# async def delete_video(video_id: str, user: dict = Depends(get_current_user)):
+#     username = user.get("username")
     
-    # 1. Fetch metadata first to get the GCS URI
-    video = await db["videos"].find_one({
-        "_id": ObjectId(video_id), 
-        "username": username
-    })
+#     # 1. Fetch metadata first to get the GCS URI
+#     video = await db["videos"].find_one({
+#         "_id": ObjectId(video_id), 
+#         "username": username
+#     })
 
-    if not video:
-        raise HTTPException(status_code=404, detail="Video not found")
+#     if not video:
+#         raise HTTPException(status_code=404, detail="Video not found")
 
-    # 2. Extract blob name from GCS URI (e.g., "gs://bucket/folder/video.mp4")
-    # Assuming video_path is the full URI
-    gcs_uri = video.get("video_path")
-    blob_name = gcs_uri.replace(f"gs://{BUCKET_NAME}/", "")
+#     # 2. Extract blob name from GCS URI (e.g., "gs://bucket/folder/video.mp4")
+#     # Assuming video_path is the full URI
+#     gcs_uri = video.get("video_path")
+#     blob_name = gcs_uri.replace(f"gs://{BUCKET_NAME}/", "")
 
-    try:
-        # 3. Delete from Google Cloud Storage
-        bucket = storage_client.bucket(BUCKET_NAME)
-        blob = bucket.blob(blob_name)
-        blob.delete()
+#     try:
+#         # 3. Delete from Google Cloud Storage
+#         bucket = storage_client.bucket(BUCKET_NAME)
+#         blob = bucket.blob(blob_name)
+#         blob.delete()
         
-        # 4. Delete from MongoDB
-        await db["videos"].delete_one({"_id": ObjectId(video_id)})
+#         # 4. Delete from MongoDB
+#         await db["videos"].delete_one({"_id": ObjectId(video_id)})
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete: {str(e)}")
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Failed to delete: {str(e)}")
 
-    return {"message": "Video and metadata deleted successfully"}
+#     return {"message": "Video and metadata deleted successfully"}
 
 @router.delete("/deleteVideo/{video_id}")
 async def delete_video(video_id: str, user: dict = Depends(get_current_user)):

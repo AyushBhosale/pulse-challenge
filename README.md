@@ -43,7 +43,7 @@ Pulse utilizes a modern, hybrid cloud architecture to ensure scalability and dat
 │   └── video.py         # GCS uploads, AI moderation & video CRUD
 ├── requirements.txt     # Python dependencies
 └── .env                 # Environment secrets
-
+```
 ## ⚙️ Local Development & Initialization
 
 Follow these steps to set up the environment:
@@ -71,7 +71,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="path/to/your/credentials.json"
 
 # 5. Run the server
 uvicorn main:app --reload
-
+```
 ## 🌐 Deployment
 
 The project is currently deployed across the following platforms:
@@ -95,3 +95,4 @@ SUPABASE_URL=
 SUPABASE_KEY=
 MONGODB_URL=
 BUCKET_NAME=
+```

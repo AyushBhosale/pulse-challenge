@@ -5,7 +5,7 @@ A high-performance FastAPI backend designed for secure video management. This se
 ## 🚀 Live Links
 * **Frontend (Vercel):** [https://pulse-frontend-khaki.vercel.app/](https://pulse-frontend-khaki.vercel.app/)
 * **Backend (Render):** [https://pulsechallenge.onrender.com/](https://pulsechallenge.onrender.com/)
-
+* **Frontend (Vercel):**[Repository](https://github.com/AyushBhosale/pulse-frontend/tree/main)
 > **Note:** The backend is hosted on a service with "cold starts." If the app hasn't been used recently, the first request may take a few moments to initialize.
 
 ---
@@ -96,3 +96,4 @@ SUPABASE_KEY=
 MONGODB_URL=
 BUCKET_NAME=
 ```
+
